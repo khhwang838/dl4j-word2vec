@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 import org.deeplearning4j.models.embeddings.WeightLookupTable;
 import org.deeplearning4j.models.embeddings.loader.WordVectorSerializer;
@@ -24,7 +26,13 @@ public class App {
 	private final static Logger log = LoggerFactory.getLogger(App.class);
 	
 	public static void main(String[] args) throws IOException {
+
+		App app = new App();
+		app.test(5);
 		
+	}
+	
+	private void test(int numOfWords) throws IOException {
 		/**
 		 * 데이터 불러오기
 		 */
@@ -33,6 +41,10 @@ public class App {
 		SentenceIterator iter = new LineSentenceIterator(resource.getFile());
 		iter.setPreProcessor(new SentencePreProcessor() {
 		    public String preProcess(String sentence) {
+		    	
+		    	// TODO : 형태소 분석하여 띄어쓰기 된 문장으로 변경
+		    	
+		    	
 		    	return sentence.toLowerCase();
 		    }
 		});
@@ -74,9 +86,34 @@ public class App {
 		// Write word vectors
 		WordVectorSerializer.writeWordVectors(vec, "word_vectors.txt");
 
+		/*
+		 * 특정 단어와 관련도가 높은 단어 추출하기
+		 */
 //		Collection<String> lst = vec.wordsNearest("day", 10);
-		Collection<String> lst = vec.wordsNearest("king", 10);
-		log.info("Closest words of 'king' : {}", lst);
+		Collection<String> lstNearest = vec.wordsNearest("쓰레기", numOfWords);
+		log.info("Closest words of '쓰레기' : {}", lstNearest);
+
+		/*
+		 * 특정 단어와 정확도(유사도)(?)가 높은 단어 추출하기
+		 */
+		double accuracy = 0.7f;
+		Collection<String> lstSimilar = vec.similarWordsInVocabTo("쓰레기", accuracy);
+		log.info("Similar words of '쓰레기' by accuracy of {} : {}", accuracy, lstSimilar);
+		
+		/*
+		 * 특정 단어와 가까운(?) 단어 추출하기
+		 */
+		Collection<String> kingList = vec.wordsNearest(Arrays.asList("음식물", "쓰레기"), Arrays.asList("queen", "woman"), numOfWords);
+		log.info("Neareast words of '음식물, 쓰레기' not 'queen, woman' : {}", kingList);
+//		Collection<String> rnnList = vec.wordsNearest(Arrays.asList("인공지능", "신경망"), Arrays.asList("rnn"), 10);
+//		log.info("Neareast of word 'RNN' : {}", rnnList);
+
+		/**
+		 * 정확도 판단하기
+		 */
+		List<String> questions = Arrays.asList("쓰레기 king queen 봉투");
+		Map<String, Double> accuracyResult = vec.accuracy(questions);
+		log.info("accuracyResult: {}", accuracyResult);
 		
 		/**
 		 * 학습 모델 저장
@@ -84,14 +121,6 @@ public class App {
 		log.info("Saving vectors....");
 		WordVectorSerializer.writeFullModel(vec, "learn_model.txt");
 		
-		/**
-		 * 저장된 모델 사용하기
-		 */
-		Collection<String> kingList = vec.wordsNearest(Arrays.asList("king", "man"), Arrays.asList("queen", "woman"), 10);
-		log.info("Neareast words of 'king, man' not 'queen, woman' : {}", kingList);
-//		Collection<String> rnnList = vec.wordsNearest(Arrays.asList("인공지능", "신경망"), Arrays.asList("rnn"), 10);
-//		log.info("Neareast of word 'RNN' : {}", rnnList);
-
 		/**
 		 * 벡터를 다시 메모리에 올리기
 		 */
@@ -104,7 +133,6 @@ public class App {
 		Iterator<INDArray> vectors = weightLookupTable.vectors();
 		INDArray wordVector = word2Vec.getWordVectorMatrix("myword");
 		double[] wordVectorArr = word2Vec.getWordVector("myword");
-		
 		
 	}
 }
